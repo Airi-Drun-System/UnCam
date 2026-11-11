@@ -1,0 +1,3 @@
+UnCam uses:
+- scrcpy (https://github.com/Genymobile/scrcpy), Apache License 2.0
+- Softcam (https://github.com/tshino/softcam), MIT License

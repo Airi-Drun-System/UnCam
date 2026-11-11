@@ -6,6 +6,7 @@ permissions: { contents: write }
 env:
   SCRCPY: v5.0.1
   SCRCPY_SHA: b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5
+  SOFTCAM: d1acde4617782f87a3929d7a7528fa3e524ec56b
 jobs:
   windows:
     runs-on: windows-latest
@@ -24,6 +25,27 @@ jobs:
           Expand-Archive $z -DestinationPath tmp
           Move-Item "tmp/scrcpy-win64-$env:SCRCPY" scrcpy
           Get-ChildItem scrcpy
+      - uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+      - name: Virtual camera
+        shell: pwsh
+        run: |
+          git clone -q https://github.com/tshino/softcam sc
+          git -C sc checkout -q $env:SOFTCAM
+          $f = "sc/src/softcam/softcam.cpp"
+          (Get-Content $f -Raw).Replace("0xaef3b972, 0x5fa5, 0x4647, 0x95, 0x71, 0x35, 0x8e, 0xb4, 0x72, 0xbc, 0x9e", "0x9ee4725c, 0xa857, 0x4168, 0x83, 0x8f, 0xad, 0xf1, 0x34, 0xec, 0x35, 0x51").Replace('L"DirectShow Softcam"', 'L"UnCam"') | Set-Content $f -NoNewline
+          $i = "sc/examples/softcam_installer/softcam_installer.cpp"
+          (Get-Content $i -Raw).Replace("softcam.dll has been successfully registered to the system", "UnCam camera is installed").Replace("softcam.dll has been successfully unregistered from the system", "UnCam camera is removed").Replace('"Softcam Installer"', '"UnCam"') | Set-Content $i -NoNewline
+          if (-not (Select-String -Path $f -Pattern "0x9ee4725c" -Quiet)) { throw "guid patch failed" }
+          Set-Content sc/Directory.Build.targets '<Project><ItemDefinitionGroup Condition="''$(Configuration)''==''Release''"><ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary></ClCompile></ItemDefinitionGroup></Project>'
+          msbuild sc/softcam.sln /p:Configuration=Release /p:Platform=x64 /m /v:m
+          msbuild sc/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /v:m
+          New-Item -ItemType Directory vcam/bin -Force | Out-Null
+          cl /nologo /O2 /EHsc /MT /std:c++17 vcam/uncam-vcam.cpp /Fevcam/bin/uncam-vcam.exe /Fovcam/ /link mfplat.lib mfuuid.lib ole32.lib oleaut32.lib
+          if ($LASTEXITCODE) { throw "helper build failed" }
+          Copy-Item sc/dist/bin/x64/softcam.dll vcam/bin/
+          Copy-Item sc/examples/softcam_installer/x64/Release/softcam_installer.exe vcam/bin/
+          Get-ChildItem vcam/bin
       - run: npm version 0.1.${{ github.run_number }} --no-git-tag-version
       - run: npx electron-builder --win nsis --publish always
         env: { CSC_IDENTITY_AUTO_DISCOVERY: false, GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }

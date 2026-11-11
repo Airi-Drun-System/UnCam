@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, addr: "" };
+const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, vcam: true, addr: "" };
 let S = DEF;
 try { S = { ...DEF, ...JSON.parse(localStorage.getItem("uc") || "{}") }; } catch {}
 const save = () => { try { localStorage.setItem("uc", JSON.stringify(S)); } catch {} };
@@ -258,7 +258,7 @@ $("br").oninput = () => {
   $("brV").textContent = v + " Мбит/с";
   save();
 };
-seg($("codec"), S.codec, (v) => { S.codec = v; save(); });
+seg($("codec"), S.codec, (v) => { S.codec = v; save(); vcUi(); });
 seg($("rot"), S.rot, (v) => { S.rot = v; save(); pushView(); });
 $("zoom").oninput = () => { S.zoom = +$("zoom").value; $("zoomV").textContent = S.zoom.toFixed(1) + "x"; save(); };
 function pushView() {
@@ -284,7 +284,6 @@ function stopped() {
   running = false;
   document.body.classList.remove("run", "play");
   $("go").textContent = "Запустить камеру";
-  $("obsBtn").disabled = true;
   player.clear();
 }
 $("go").onclick = async () => {
@@ -300,15 +299,28 @@ $("go").onclick = async () => {
   document.body.classList.add("run");
   $("go").textContent = "Остановить";
   $("go").disabled = false;
-  $("obsBtn").disabled = false;
   $("fps").textContent = "0";
   setState("Запускается...");
   pushView();
-  const ok = await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch });
+  const ok = await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch, vcam: S.vcam && vcOk });
   if (!ok && running) { stopped(); setState("Не удалось запустить, смотри журнал", "err"); }
 };
-$("obsBtn").onclick = () => window.uc.obs();
-window.uc.onObsOpen(() => pushView());
+let vcOk = false;
+function vcUi() {
+  $("vcam").checked = S.vcam;
+  $("vcInstall").hidden = vcOk;
+  $("vcText").textContent = !vcOk ? "Камера ещё не установлена. Нужно один раз, Windows спросит права администратора." : !S.vcam ? "Выключена: видео только в окне UnCam." : S.codec !== "h264" ? "Работает только с кодеком H.264, переключи кодек." : "В Discord, Vela или браузере выбери камеру «UnCam». Работает, пока здесь идёт трансляция.";
+}
+$("vcam").onchange = () => { S.vcam = $("vcam").checked; save(); vcUi(); };
+$("vcInstall").onclick = async () => {
+  $("vcInstall").disabled = true;
+  $("vcText").textContent = "Подтверди установку в окне Windows...";
+  vcOk = await window.uc.vcamState() || await window.uc.vcamInstall();
+  $("vcInstall").disabled = false;
+  vcUi();
+  toast(vcOk ? "Камера UnCam установлена" : "Установка отменена");
+};
+window.uc.vcamState().then((ok) => { vcOk = ok; vcUi(); });
 $("zin").onclick = () => window.uc.ctl("zin");
 $("zout").onclick = () => window.uc.ctl("zout");
 $("torchBtn").onclick = () => { torchOn = !torchOn; $("torchBtn").classList.toggle("on", torchOn); window.uc.ctl(torchOn ? "torch1" : "torch0"); };

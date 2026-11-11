@@ -24,8 +24,8 @@ ipcMain.handle("adb", (_e, args) => {
 });
 ipcMain.handle("cams", (_e, serial) => run(exe("scrcpy"), ["-s", String(serial), "--list-camera-sizes"], 30000));
 const SERVER_VER = "5.0.1", REMOTE = "/data/local/tmp/uncam-server.jar";
-let sess = null, obs = null, lastSize = null, lastCodec = null;
-const send = (ch, v) => { for (const w of [win, obs]) if (w && !w.isDestroyed()) w.webContents.send(ch, v); };
+let sess = null;
+const send = (ch, v) => win && !win.isDestroyed() && win.webContents.send(ch, v);
 const say = (l) => win && !win.isDestroyed() && win.webContents.send("log", l);
 function connectTcp(port, tries) {
   return new Promise((res, rej) => {
@@ -45,6 +45,7 @@ async function stopStream() {
   if (!s) return;
   sess = null;
   for (const k of ["video", "control"]) if (s[k]) s[k].destroy();
+  stopHelper();
   if (s.proc) s.proc.kill();
   await run(exe("adb"), ["-s", s.serial, "forward", "--remove", "tcp:" + s.port]);
   send("exit", s.code || 0);
@@ -61,6 +62,8 @@ ipcMain.handle("start", async (_e, o) => {
   if (!push.ok) { say("ERROR: " + push.out); me.code = 1; await stopStream(); return false; }
   const fw = await run(exe("adb"), ["-s", serial, "forward", "tcp:" + port, "localabstract:scrcpy_" + scid]);
   if (!fw.ok) { say("ERROR: " + fw.out); me.code = 1; await stopStream(); return false; }
+  lastConfig = null;
+  if (o.vcam && o.codec === "h264") startHelper();
   const args = serverArgs({ ...o, scid });
   say("> server " + args.join(" "));
   me.proc = spawn(exe("adb"), ["-s", serial, "shell", "CLASSPATH=" + REMOTE, "app_process", "/", "com.genymobile.scrcpy.Server", SERVER_VER, ...args], { env, windowsHide: true });
@@ -79,10 +82,9 @@ ipcMain.handle("start", async (_e, o) => {
     return false;
   }
   const parser = new StreamParser((ev) => {
-    if (ev.t === "codec") lastCodec = ev;
-    if (ev.t === "size") lastSize = ev;
     if (ev.t === "codec" && ev.name === "error") { say("ERROR: камера не запустилась (проверь разрешение и fps)"); }
     send("v", ev);
+    toHelper(ev);
   });
   me.video.on("data", (d) => parser.push(d));
   me.video.on("error", () => {});
@@ -98,19 +100,62 @@ ipcMain.on("ctl", (_e, m) => {
   else if (m === "zout") sess.control.write(Buffer.from([20]));
   else if (m === "torch1" || m === "torch0") sess.control.write(Buffer.from([18, m === "torch1" ? 1 : 0]));
 });
-ipcMain.on("view", (_e, v) => send("view", v));
-ipcMain.on("obs", () => {
-  if (obs && !obs.isDestroyed()) return obs.focus();
-  const w = lastSize ? lastSize.w : 1280, h = lastSize ? lastSize.h : 720, k = Math.min(1, 960 / Math.max(w, h));
-  obs = new BrowserWindow({ width: Math.round(w * k), height: Math.round(h * k), title: "UnCam — вебка", backgroundColor: "#000000", icon: path.join(__dirname, "build", "icon.png"), autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, preload: path.join(__dirname, "preload.js") } });
-  obs.loadFile(path.join(__dirname, "src", "obs.html"));
-  obs.webContents.once("did-finish-load", () => {
-    if (lastCodec) obs.webContents.send("v", lastCodec);
-    if (lastSize) obs.webContents.send("v", lastSize);
-    if (win) win.webContents.send("obsOpen");
+const VC = app.isPackaged ? path.join(process.resourcesPath, "vcam") : path.join(__dirname, "vcam", "bin");
+const VC_CLSID = "{9EE4725C-A857-4168-838F-ADF134EC3551}";
+let helper = null, view = { rot: 0, mirror: false }, lastConfig = null, helperNeedKey = true;
+async function vcamInstalled() {
+  if (process.platform !== "win32") return false;
+  const r = await run("reg", ["query", "HKCR\\CLSID\\" + VC_CLSID + "\\InprocServer32"]);
+  return r.ok;
+}
+ipcMain.handle("vcamState", () => vcamInstalled());
+ipcMain.handle("vcamInstall", async () => {
+  const q = (x) => "'" + x.replace(/'/g, "''") + "'";
+  const cmd = "Start-Process -FilePath " + q(path.join(VC, "softcam_installer.exe")) + " -ArgumentList 'register'," + q('"' + path.join(VC, "softcam.dll") + '"') + " -Verb RunAs -Wait";
+  await run("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd], 120000);
+  return vcamInstalled();
+});
+function frameMsg(type, data) {
+  const h = Buffer.alloc(5);
+  h[0] = type;
+  h.writeUInt32BE(data.length, 1);
+  return Buffer.concat([h, data]);
+}
+function startHelper() {
+  stopHelper();
+  const p = spawn(path.join(VC, "uncam-vcam.exe"), [String(view.rot), view.mirror ? "1" : "0"], { windowsHide: true });
+  helper = p;
+  helperNeedKey = true;
+  p.stderr.on("data", (d) => String(d).split(/\r?\n/).forEach((l) => l.trim() && say("vcam: " + l)));
+  p.on("error", (e) => say("ERROR: vcam " + e.message));
+  p.stdin.on("error", () => {});
+  p.on("close", () => { if (helper === p) helper = null; });
+  if (lastConfig) p.stdin.write(frameMsg(1, lastConfig));
+  if (sess && sess.control) sess.control.write(Buffer.from([17]));
+}
+function stopHelper() {
+  if (!helper) return;
+  const p = helper;
+  helper = null;
+  p.stdin.end();
+  setTimeout(() => p.kill(), 300);
+}
+function toHelper(ev) {
+  if (!helper || ev.t !== "pkt") return;
+  if (ev.config) { lastConfig = ev.data; helper.stdin.write(frameMsg(1, ev.data)); return; }
+  if (helperNeedKey && !ev.key) return;
+  if (helper.stdin.writableLength > 8e6) {
+    helperNeedKey = true;
     if (sess && sess.control) sess.control.write(Buffer.from([17]));
-  });
-  obs.on("closed", () => { obs = null; });
+    return;
+  }
+  helperNeedKey = false;
+  helper.stdin.write(frameMsg(ev.key ? 2 : 3, ev.data));
+}
+ipcMain.on("view", (_e, v) => {
+  const changed = +v.rot !== view.rot || !!v.mirror !== view.mirror;
+  view = { rot: +v.rot || 0, mirror: !!v.mirror };
+  if (changed && helper) startHelper();
 });
 ipcMain.on("win", (_e, a) => {
   if (!win) return;
@@ -152,4 +197,4 @@ app.whenReady().then(() => {
 });
 app.on("second-instance", () => { if (win) { win.show(); win.focus(); } });
 app.on("window-all-closed", () => app.quit());
-app.on("before-quit", () => { if (sess) { if (sess.proc) sess.proc.kill(); } });
+app.on("before-quit", () => { stopHelper(); if (sess && sess.proc) sess.proc.kill(); });

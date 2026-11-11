@@ -22,7 +22,7 @@
     "icon": "build/icon.png",
     "copyright": "© 2026 VegasDev",
     "files": ["main.js", "preload.js", "proto.js", "src/**", "build/icon.png", "package.json"],
-    "extraResources": [{ "from": "scrcpy", "to": "scrcpy" }],
+    "extraResources": [{ "from": "scrcpy", "to": "scrcpy" }, { "from": "vcam/bin", "to": "vcam" }],
     "win": { "target": ["nsis"] },
     "nsis": {
       "artifactName": "UnCam-${version}-setup.exe",
