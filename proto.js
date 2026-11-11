@@ -37,7 +37,7 @@ class StreamParser {
   }
 }
 function serverArgs(o) {
-  if (o.source === "app") return ["scid=" + o.scid, "log_level=info", "tunnel_forward=true", "audio=false", "control=true", "cleanup=true", "send_device_meta=false", "video_source=display", "max_fps=" + o.fps, "stay_awake=true", "video_bit_rate=" + o.bitrate * 1000000, "video_codec=" + o.codec];
+  if (o.source === "app" || o.source === "screen") return ["scid=" + o.scid, "log_level=info", "tunnel_forward=true", "audio=false", "control=true", "cleanup=true", "send_device_meta=false", "video_source=display", "max_fps=" + o.fps, "stay_awake=true", "video_bit_rate=" + o.bitrate * 1000000, "video_codec=" + o.codec];
   const a = ["scid=" + o.scid, "log_level=info", "tunnel_forward=true", "audio=false", "control=true", "cleanup=true", "send_device_meta=false", "video_source=camera", "camera_id=" + o.cam, "camera_fps=" + o.fps, "video_bit_rate=" + o.bitrate * 1000000, "video_codec=" + o.codec];
   if (o.size) a.push("camera_size=" + o.size);
   if (o.high) a.push("camera_high_speed=true");

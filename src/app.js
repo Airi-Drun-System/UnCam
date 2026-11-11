@@ -59,7 +59,7 @@ function renderDevs() {
   const c = cur();
   $("toWifi").disabled = !c || c.wifi || c.state !== "device";
   $("go").disabled = !running && (!c || c.state !== "device" || (S.src === "cam" && !cams.length));
-  if (!running) setState(!c ? "Выбери телефон" : c.state !== "device" ? "Телефон не готов" : cams.length || S.src === "app" ? "Готово к запуску" : "Читаю камеры...");
+  if (!running) setState(!c ? "Выбери телефон" : c.state !== "device" ? "Телефон не готов" : cams.length || S.src !== "cam" ? "Готово к запуску" : "Читаю камеры...");
 }
 async function poll() {
   if (busy || running) return;
@@ -264,7 +264,7 @@ seg($("codec"), S.codec, (v) => { S.codec = v; save(); vcUi(); });
 seg($("rot"), S.rot, (v) => { S.rot = v; save(); pushView(); });
 $("zoom").oninput = () => { S.zoom = +$("zoom").value; $("zoomV").textContent = S.zoom.toFixed(1) + "x"; save(); };
 function pushView() {
-  const v = { rot: S.rot, mirror: S.mirror, crop: S.src === "app" ? S.crop : null };
+  const v = { rot: S.rot, mirror: S.mirror, crop: S.src !== "cam" ? S.crop : null };
   player.setView(v);
   window.uc.view(v);
   try { localStorage.setItem("ucView", JSON.stringify(v)); } catch {}
@@ -297,7 +297,7 @@ $("go").onclick = async () => {
   if (!c) return;
   const { high } = fpsList();
   const hs = high.includes(+S.fps);
-  const app = S.src === "app";
+  const app = S.src !== "cam";
   target = app ? +S.afps : +S.fps;
   running = true;
   torchOn = !!S.torch;
@@ -309,16 +309,18 @@ $("go").onclick = async () => {
   setState("Запускается...");
   pushView();
   const br = S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb;
-  const ok = app ? await window.uc.start({ source: "app", serial: c.serial, fps: +S.afps, bitrate: br, codec: S.codec, vcam: S.vcam && vcOk }) : await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch, vcam: S.vcam && vcOk });
+  const ok = app ? await window.uc.start({ source: S.src, serial: c.serial, fps: +S.afps, bitrate: br, codec: S.codec, vcam: S.vcam && vcOk }) : await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch, vcam: S.vcam && vcOk });
   if (!ok && running) { stopped(); setState("Не удалось запустить, смотри журнал", "err"); }
 };
 function setSrc(v) {
   S.src = v;
   save();
-  document.body.classList.toggle("src-app", v === "app");
-  document.body.classList.toggle("src-cam", v !== "app");
-  $("appBox").hidden = v !== "app";
-  $("direct").hidden = v === "app";
+  document.body.classList.toggle("src-app", v !== "cam");
+  document.body.classList.toggle("src-cam", v === "cam");
+  $("appBox").hidden = v === "cam";
+  $("direct").hidden = v !== "cam";
+  $("hintApp").hidden = v !== "app";
+  $("hintScreen").hidden = v !== "screen";
   renderCams();
   renderDevs();
   pushView();

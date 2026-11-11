@@ -43,10 +43,12 @@
       <div class="h"><b>Камера</b><span class="muted" id="camInfo"></span></div>
       <div class="seg wide" id="srcSel">
         <button data-v="cam">Напрямую</button>
-        <button data-v="app">Через приложение Камера</button>
+        <button data-v="app">Через «Камеру»</button>
+        <button data-v="screen">Экран телефона</button>
       </div>
       <div id="appBox" class="sub">
-        <p class="hint">UnCam откроет на телефоне обычную «Камеру» в режиме видео и будет брать картинку с экрана. Так Xiaomi отдаёт 60 fps. Включи в «Камере» 60 к/с, а лишние кнопки обрежь кнопкой «Обрезать» на превью.</p>
+        <p class="hint" id="hintScreen">Трансляция всего экрана телефона, например игры. Лишнее можно обрезать кнопкой «Обрезать» на превью.</p>
+        <p class="hint" id="hintApp">UnCam откроет на телефоне обычную «Камеру» в режиме видео и будет брать картинку с экрана. Так Xiaomi отдаёт 60 fps. Включи в «Камере» 60 к/с, а лишние кнопки обрежь кнопкой «Обрезать» на превью.</p>
         <div class="f">Кадров в секунду<div class="seg" id="afps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="90">90</button><button data-v="120">120</button></div></div>
       </div>
       <div id="direct" class="sub">
