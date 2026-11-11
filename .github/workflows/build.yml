@@ -38,7 +38,7 @@ jobs:
           (Get-Content $i -Raw).Replace("softcam.dll has been successfully registered to the system", "UnCam camera is installed").Replace("softcam.dll has been successfully unregistered from the system", "UnCam camera is removed").Replace('"Softcam Installer"', '"UnCam"') | Set-Content $i -NoNewline
           if (-not (Select-String -Path $f -Pattern "0x9ee4725c" -Quiet)) { throw "guid patch failed" }
           Set-Content sc/Directory.Build.targets '<Project><ItemDefinitionGroup Condition="''$(Configuration)''==''Release''"><ClCompile><RuntimeLibrary>MultiThreaded</RuntimeLibrary></ClCompile></ItemDefinitionGroup></Project>'
-          msbuild sc/softcam.sln /p:Configuration=Release /p:Platform=x64 /m /v:m
+          msbuild sc/softcam.sln /t:softcam /p:Configuration=Release /p:Platform=x64 /m /v:m
           msbuild sc/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /v:m
           New-Item -ItemType Directory vcam/bin -Force | Out-Null
           cl /nologo /O2 /EHsc /MT /std:c++17 vcam/uncam-vcam.cpp /Fevcam/bin/uncam-vcam.exe /Fovcam/ /link mfplat.lib mfuuid.lib ole32.lib oleaut32.lib

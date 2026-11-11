@@ -5,7 +5,6 @@
 #include <mferror.h>
 #include <wmcodecdsp.h>
 #include <codecapi.h>
-#include <icodecapi.h>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
