@@ -6,7 +6,7 @@
   "author": "VegasDev",
   "main": "main.js",
   "scripts": {
-    "test": "node test/lib.test.js",
+    "test": "node test/lib.test.js && node test/proto.test.js",
     "start": "electron ."
   },
   "dependencies": {
@@ -21,7 +21,7 @@
     "productName": "UnCam",
     "icon": "build/icon.png",
     "copyright": "© 2026 VegasDev",
-    "files": ["main.js", "preload.js", "src/**", "build/icon.png", "package.json"],
+    "files": ["main.js", "preload.js", "proto.js", "src/**", "build/icon.png", "package.json"],
     "extraResources": [{ "from": "scrcpy", "to": "scrcpy" }],
     "win": { "target": ["nsis"] },
     "nsis": {

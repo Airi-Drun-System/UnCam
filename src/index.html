@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
 <title>UnCam</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -51,26 +51,31 @@
       <div class="togs">
         <label class="tog"><input type="checkbox" id="mirror"><i></i>Зеркало</label>
         <label class="tog"><input type="checkbox" id="torch"><i></i>Фонарик</label>
-        <label class="tog"><input type="checkbox" id="mic"><i></i>Микрофон телефона</label>
-        <label class="tog"><input type="checkbox" id="top"><i></i>Поверх всех окон</label>
-        <label class="tog"><input type="checkbox" id="borderless"><i></i>Окно без рамки</label>
       </div>
     </div>
   </section>
   <section class="stage">
-    <div class="meter" id="meter">
-      <svg viewBox="0 0 200 200"><circle class="trk" cx="100" cy="100" r="86"/><circle class="arc" id="arc" cx="100" cy="100" r="86"/></svg>
-      <div class="num"><b id="fps">0</b><span>fps</span></div>
+    <div class="screen" id="screen">
+      <canvas id="v" width="1280" height="720"></canvas>
+      <div class="idle" id="idle"><span class="lens big"></span><span id="state" class="state">Выбери телефон</span></div>
+      <div class="badge" id="badge"><i></i><b id="fps">0</b> fps</div>
+      <div class="live" id="liveBar">
+        <button id="zout" title="Отдалить">−</button>
+        <button id="zin" title="Приблизить">+</button>
+        <button id="torchBtn" title="Фонарик">Фонарик</button>
+      </div>
     </div>
-    <div class="state" id="state">Выбери телефон</div>
-    <button id="go" class="go" disabled>Запустить камеру</button>
+    <div class="acts">
+      <button id="go" class="go" disabled>Запустить камеру</button>
+      <button id="obsBtn" class="ghost big" disabled>Окно для OBS</button>
+    </div>
     <div class="obs">
       <b>Как сделать вебкой</b>
       <ol>
-        <li>Запусти камеру, откроется окно <em>UnCam</em></li>
-        <li>OBS → Источники → <em>Захват окна</em> → <em>[scrcpy.exe]: UnCam</em></li>
+        <li>Запусти камеру и нажми <em>Окно для OBS</em></li>
+        <li>OBS → Источники → <em>Захват окна</em> → <em>[UnCam.exe]: UnCam — вебка</em></li>
         <li>OBS → <em>Запустить виртуальную камеру</em></li>
-        <li>В Discord или Vela выбери камеру <em>OBS Virtual Camera</em></li>
+        <li>В Discord или Vela выбери <em>OBS Virtual Camera</em></li>
       </ol>
     </div>
     <details class="log"><summary>Журнал</summary><pre id="log"></pre></details>
@@ -78,6 +83,7 @@
 </main>
 <div id="toast" class="toast" hidden></div>
 <script src="lib.js"></script>
+<script src="player.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

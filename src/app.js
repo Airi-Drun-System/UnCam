@@ -1,9 +1,10 @@
 const $ = (id) => document.getElementById(id);
-const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, mic: false, top: false, borderless: false, addr: "" };
+const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, addr: "" };
 let S = DEF;
 try { S = { ...DEF, ...JSON.parse(localStorage.getItem("uc") || "{}") }; } catch {}
 const save = () => { try { localStorage.setItem("uc", JSON.stringify(S)); } catch {} };
-let devs = [], cams = [], camCache = {}, running = false, busy = false, target = 60, lastFps = 0;
+let devs = [], cams = [], camCache = {}, running = false, busy = false, target = 60, torchOn = false, lastReset = 0;
+const player = Player($("v"), onFps, () => { if (running && Date.now() - lastReset > 1500) { lastReset = Date.now(); window.uc.ctl("reset"); } });
 
 function toast(t) {
   const el = $("toast");
@@ -258,54 +259,72 @@ $("br").oninput = () => {
   save();
 };
 seg($("codec"), S.codec, (v) => { S.codec = v; save(); });
-seg($("rot"), S.rot, (v) => { S.rot = v; save(); });
+seg($("rot"), S.rot, (v) => { S.rot = v; save(); pushView(); });
 $("zoom").oninput = () => { S.zoom = +$("zoom").value; $("zoomV").textContent = S.zoom.toFixed(1) + "x"; save(); };
-for (const k of ["mirror", "torch", "mic", "top", "borderless"]) {
+function pushView() {
+  const v = { rot: S.rot, mirror: S.mirror };
+  player.setView(v);
+  window.uc.view(v);
+  try { localStorage.setItem("ucView", JSON.stringify(v)); } catch {}
+}
+for (const k of ["mirror", "torch"]) {
   $(k).checked = !!S[k];
-  $(k).onchange = () => { S[k] = $(k).checked; save(); };
+  $(k).onchange = () => { S[k] = $(k).checked; save(); if (k === "mirror") pushView(); };
 }
 
-function meter(f) {
+function onFps(f) {
+  if (!running) return;
   $("fps").textContent = f;
-  const arc = $("arc"), len = 2 * Math.PI * 86;
-  arc.style.strokeDasharray = len;
-  arc.style.strokeDashoffset = len * (1 - Math.min(f / target, 1));
-  $("meter").classList.toggle("good", running && f >= target * 0.95);
-  $("meter").classList.toggle("low", running && f > 0 && f < target * 0.8);
+  const bd = $("badge");
+  bd.classList.toggle("good", f >= target * 0.95);
+  bd.classList.toggle("low", f > 0 && f < target * 0.8);
+  if (f > 0) document.body.classList.add("play");
+}
+function stopped() {
+  running = false;
+  document.body.classList.remove("run", "play");
+  $("go").textContent = "Запустить камеру";
+  $("obsBtn").disabled = true;
+  player.clear();
 }
 $("go").onclick = async () => {
   if (running) return window.uc.stop();
   const c = cur();
   if (!c) return;
   const { high } = fpsList();
+  const hs = high.includes(+S.fps);
   target = +S.fps;
-  const args = UC.buildArgs({ serial: c.serial, cam: S.cam, size: S.size, fps: S.fps, high: high.includes(+S.fps), bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, rotate: S.rot, mirror: S.mirror, zoom: high.includes(+S.fps) ? 1 : S.zoom, torch: S.torch, mic: S.mic, top: S.top, borderless: S.borderless });
-  log("> scrcpy " + args.join(" "));
-  if (!(await window.uc.start(args))) return toast("Не удалось запустить");
   running = true;
+  torchOn = !!S.torch;
+  $("torchBtn").classList.toggle("on", torchOn);
   document.body.classList.add("run");
   $("go").textContent = "Остановить";
   $("go").disabled = false;
+  $("obsBtn").disabled = false;
+  $("fps").textContent = "0";
   setState("Запускается...");
-  meter(0);
+  pushView();
+  const ok = await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch });
+  if (!ok && running) { stopped(); setState("Не удалось запустить, смотри журнал", "err"); }
 };
+$("obsBtn").onclick = () => window.uc.obs();
+window.uc.onObsOpen(() => pushView());
+$("zin").onclick = () => window.uc.ctl("zin");
+$("zout").onclick = () => window.uc.ctl("zout");
+$("torchBtn").onclick = () => { torchOn = !torchOn; $("torchBtn").classList.toggle("on", torchOn); window.uc.ctl(torchOn ? "torch1" : "torch0"); };
+window.uc.onV((ev) => {
+  player.feed(ev);
+  if (ev.t === "codec" && ev.name !== "error") setState("Идёт трансляция", "ok");
+});
 window.uc.onLog((l) => {
   log(l);
-  const f = UC.parseFps(l);
-  if (f !== null && running) {
-    lastFps = f;
-    meter(f);
-    setState(f >= target * 0.95 ? "Идёт трансляция" : f < target * 0.8 ? "Кадры проседают" + (cur() && cur().wifi ? ": понизь битрейт или подойди к роутеру" : "") : "Идёт трансляция", f >= target * 0.95 ? "ok" : f < target * 0.8 ? "warn" : "ok");
-  } else if (/ERROR/.test(l) && running) setState(l.replace(/^.*ERROR:\s*/, "").slice(0, 140), "err");
+  if (/ERROR/.test(l) && running) setState(l.replace(/^.*ERROR:\s*/, "").slice(0, 160), "err");
 });
 window.uc.onExit((code) => {
-  running = false;
-  document.body.classList.remove("run");
-  $("go").textContent = "Запустить камеру";
-  meter(0);
-  const st = $("state");
-  if (code && !st.classList.contains("err")) setState("Камера остановилась с ошибкой, смотри журнал", "err");
-  else if (!code) renderDevs();
+  const wasErr = $("state").classList.contains("err");
+  stopped();
+  if (code && !wasErr) setState("Камера остановилась с ошибкой, смотри журнал", "err");
+  else if (!wasErr) renderDevs();
   poll();
 });
 window.uc.onUpdate((o) => {
@@ -320,6 +339,7 @@ window.uc.onUpdate((o) => {
 });
 for (const b of document.querySelectorAll("[data-w]")) b.onclick = () => window.uc.win(b.dataset.w);
 setMode(S.mode);
+pushView();
 renderCams();
 poll();
 setInterval(poll, 2500);

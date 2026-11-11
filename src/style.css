@@ -1,7 +1,38 @@
 @font-face {
-  font-family: "Comic Neue Cyr";
-  src: url("fonts/ComicNeueCyr-Bold.otf");
+  font-family: "Inter";
+  src: url("fonts/inter-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2212;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-cyrillic-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-latin-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2212;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-cyrillic-600-normal.woff2") format("woff2");
+  font-weight: 600;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-latin-700-normal.woff2") format("woff2");
   font-weight: 700;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2212;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-cyrillic-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 :root {
   --bg: #0a0a0a;
@@ -23,7 +54,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--txt);
-  font: 700 14px/1.4 "Comic Neue Cyr", system-ui, sans-serif;
+  font: 400 14px/1.45 "Inter", "Segoe UI", system-ui, sans-serif;
   overflow: hidden;
   user-select: none;
 }
@@ -32,6 +63,7 @@ button, input, select {
   color: inherit;
 }
 button {
+  font-weight: 600;
   cursor: pointer;
   border: 0;
   background: var(--card2);
@@ -163,7 +195,10 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 16px;
+  font-size: 15px;
+}
+.h b, .obs b, .dev b {
+  font-weight: 700;
 }
 .muted, .hint {
   color: var(--mut);
@@ -374,59 +409,10 @@ input[type=range]::-webkit-slider-thumb {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 24px 16px;
+  padding: 14px 14px 12px;
   gap: 14px;
   overflow-y: auto;
   min-height: 0;
-}
-.meter {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  flex: none;
-}
-.meter svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.meter circle {
-  fill: none;
-  stroke-width: 10;
-}
-.trk {
-  stroke: #1f1f1f;
-}
-.arc {
-  stroke: var(--txt);
-  stroke-linecap: round;
-  stroke-dasharray: 540;
-  stroke-dashoffset: 540;
-  transition: stroke-dashoffset .5s cubic-bezier(.2, .8, .3, 1), stroke .3s;
-}
-.meter.good .arc {
-  stroke: var(--ok);
-}
-.meter.low .arc {
-  stroke: var(--warn);
-}
-.num {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.num b {
-  font-size: 64px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.num span {
-  color: var(--mut);
-  font-size: 14px;
-  letter-spacing: 2px;
 }
 .state {
   color: var(--mut);
@@ -446,10 +432,10 @@ input[type=range]::-webkit-slider-thumb {
 .go {
   background: var(--txt);
   color: var(--bg);
-  font-size: 16px;
-  padding: 14px 34px;
-  border-radius: 16px;
-  min-width: 240px;
+  font-size: 15px;
+  padding: 13px 28px;
+  border-radius: 14px;
+  flex: 1;
 }
 .go:hover:not(:disabled) {
   background: #fff;
@@ -513,4 +499,111 @@ body.run .go {
 }
 body.run .go:hover:not(:disabled) {
   background: #ff5a50;
+}
+.screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 52vh;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+  flex: none;
+}
+.screen canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity .3s;
+}
+body.play .screen canvas {
+  opacity: 1;
+}
+.idle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transition: opacity .3s;
+}
+body.play .idle {
+  opacity: 0;
+  pointer-events: none;
+}
+.lens.big {
+  width: 54px;
+  height: 54px;
+  border-width: 6px;
+}
+.lens.big::after {
+  inset: 8px;
+}
+.badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+.badge b {
+  color: var(--txt);
+  font-size: 14px;
+}
+.badge i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rec);
+  animation: blink 1.2s infinite;
+}
+.badge.good b {
+  color: var(--ok);
+}
+.badge.low b {
+  color: var(--warn);
+}
+body.play .badge {
+  display: flex;
+}
+.live {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: none;
+  gap: 6px;
+}
+body.play .live {
+  display: flex;
+}
+.live button {
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(6px);
+  padding: 6px 12px;
+  min-width: 34px;
+}
+.live button.on {
+  background: var(--txt);
+  color: var(--bg);
+}
+.acts {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.ghost.big {
+  padding: 13px 18px;
+  font-size: 14px;
 }

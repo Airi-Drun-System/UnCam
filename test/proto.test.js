@@ -1,0 +1,18 @@
+const a = require("assert");
+const { StreamParser, serverArgs } = require("../proto.js");
+const ev = [];
+const p = new StreamParser((e) => ev.push(e));
+const sess = Buffer.alloc(12); sess[0] = 0x80; sess.writeUInt32BE(1920, 4); sess.writeUInt32BE(1080, 8);
+const hdr = (flags, pts, n) => { const h = Buffer.alloc(12); h.writeUInt32BE((flags | Math.floor(pts / 4294967296)) >>> 0, 0); h.writeUInt32BE(pts % 4294967296, 4); h.writeUInt32BE(n, 8); return h; };
+const all = Buffer.concat([Buffer.from([0]), Buffer.from([0x68, 0x32, 0x36, 0x34]), sess, hdr(0x40000000, 0, 3), Buffer.from([1, 2, 3]), hdr(0x20000000, 16666, 2), Buffer.from([9, 9]), hdr(0, 5000000000, 1), Buffer.from([7])]);
+for (let i = 0; i < all.length; i += 5) p.push(all.subarray(i, i + 5));
+a.deepStrictEqual(ev.map((e) => e.t), ["codec", "size", "pkt", "pkt", "pkt"]);
+a.strictEqual(ev[0].name, "h264");
+a.strictEqual(ev[1].w, 1920);
+a.ok(ev[2].config && !ev[2].key);
+a.ok(ev[3].key && ev[3].pts === 16666);
+a.strictEqual(ev[4].pts, 5000000000);
+a.deepStrictEqual([...ev[4].data], [7]);
+const s = serverArgs({ scid: "1a2b3c4d", cam: "0", fps: 60, bitrate: 24, codec: "h264", size: "1920x1080", zoom: 1 });
+a.ok(s.includes("camera_fps=60") && s.includes("video_bit_rate=24000000") && !s.some((x) => x.startsWith("camera_zoom")));
+console.log("proto ok");
