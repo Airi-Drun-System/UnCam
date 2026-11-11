@@ -41,7 +41,7 @@ jobs:
           msbuild sc/softcam.sln /t:softcam /p:Configuration=Release /p:Platform=x64 /m /v:m
           msbuild sc/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /v:m
           New-Item -ItemType Directory vcam/bin -Force | Out-Null
-          cl /nologo /O2 /EHsc /MT /std:c++17 vcam/uncam-vcam.cpp /Fevcam/bin/uncam-vcam.exe /Fovcam/ /link mfplat.lib mfuuid.lib ole32.lib oleaut32.lib
+          cl /nologo /O2 /EHsc /MT /std:c++17 vcam/uncam-vcam.cpp /Fevcam/bin/uncam-vcam.exe /Fovcam/ /link mfplat.lib mfuuid.lib ole32.lib oleaut32.lib wmcodecdspuuid.lib
           if ($LASTEXITCODE) { throw "helper build failed" }
           Copy-Item sc/dist/bin/x64/softcam.dll vcam/bin/
           Copy-Item sc/examples/softcam_installer/x64/Release/softcam_installer.exe vcam/bin/
