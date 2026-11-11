@@ -1,0 +1,29 @@
+name: Build
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+permissions: { contents: write }
+env:
+  SCRCPY: v5.0.1
+  SCRCPY_SHA: b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+      - run: npm test
+      - name: scrcpy
+        shell: pwsh
+        run: |
+          $z = "scrcpy.zip"
+          Invoke-WebRequest "https://github.com/Genymobile/scrcpy/releases/download/$env:SCRCPY/scrcpy-win64-$env:SCRCPY.zip" -OutFile $z
+          if ((Get-FileHash $z -Algorithm SHA256).Hash.ToLower() -ne $env:SCRCPY_SHA) { throw "scrcpy checksum mismatch" }
+          Expand-Archive $z -DestinationPath tmp
+          Move-Item "tmp/scrcpy-win64-$env:SCRCPY" scrcpy
+          Get-ChildItem scrcpy
+      - run: npm version 0.1.${{ github.run_number }} --no-git-tag-version
+      - run: npx electron-builder --win nsis --publish always
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: false, GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>UnCam</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="logo"><span class="lens"></span>UnCam</div>
+  <div id="upd" hidden></div>
+  <div class="wbtn">
+    <button data-w="min" title="Свернуть"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+    <button data-w="max" title="Развернуть"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1"/></svg></button>
+    <button data-w="close" class="x" title="Закрыть"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+  </div>
+</header>
+<main>
+  <section class="col">
+    <div class="card">
+      <div class="h"><b>Телефон</b><button class="ghost" id="refresh">Обновить</button></div>
+      <div id="devs" class="devs"></div>
+      <div class="seg wide" id="mode">
+        <button data-v="usb">По проводу</button>
+        <button data-v="wifi">По Wi-Fi</button>
+      </div>
+      <div id="usbBox" class="sub">
+        <p class="hint">Подключи телефон кабелем. Отладка по USB должна быть включена, а на телефоне — разрешение для этого компьютера.</p>
+        <button id="toWifi" class="ghost">Перевести этот телефон на Wi-Fi</button>
+      </div>
+      <div id="wifiBox" class="sub" hidden>
+        <button id="scan" class="ghost">Найти телефон в сети</button>
+        <div class="row"><input id="addr" placeholder="IP:порт, например 192.168.0.42:5555" spellcheck="false"><button id="conn">Подключить</button></div>
+        <details id="pairBox">
+          <summary>Первое подключение (сопряжение)</summary>
+          <p class="hint">На телефоне: Для разработчиков → Отладка по Wi-Fi → Подключить устройство с помощью кода. Введи адрес и код с экрана.</p>
+          <div class="row"><input id="paddr" placeholder="IP:порт сопряжения" spellcheck="false"><input id="pcode" class="code" placeholder="Код" maxlength="6" inputmode="numeric"><button id="pair">Сопрячь</button></div>
+        </details>
+      </div>
+    </div>
+    <div class="card" id="camCard">
+      <div class="h"><b>Камера</b><span class="muted" id="camInfo"></span></div>
+      <div id="cams" class="chips"></div>
+      <label class="f">Разрешение<select id="size"></select></label>
+      <div class="f">Кадров в секунду<div id="fpsSel" class="seg"></div></div>
+      <label class="f">Битрейт <span id="brV" class="val"></span><input type="range" id="br" min="4" max="60" step="2"></label>
+      <div class="f">Кодек<div class="seg" id="codec"><button data-v="h264">H.264</button><button data-v="h265">H.265</button></div></div>
+      <div class="f">Поворот<div class="seg" id="rot"><button data-v="0">0°</button><button data-v="90">90°</button><button data-v="180">180°</button><button data-v="270">270°</button></div></div>
+      <label class="f" id="zoomRow">Зум <span id="zoomV" class="val"></span><input type="range" id="zoom" min="1" max="10" step="0.1"></label>
+      <div class="togs">
+        <label class="tog"><input type="checkbox" id="mirror"><i></i>Зеркало</label>
+        <label class="tog"><input type="checkbox" id="torch"><i></i>Фонарик</label>
+        <label class="tog"><input type="checkbox" id="mic"><i></i>Микрофон телефона</label>
+        <label class="tog"><input type="checkbox" id="top"><i></i>Поверх всех окон</label>
+        <label class="tog"><input type="checkbox" id="borderless"><i></i>Окно без рамки</label>
+      </div>
+    </div>
+  </section>
+  <section class="stage">
+    <div class="meter" id="meter">
+      <svg viewBox="0 0 200 200"><circle class="trk" cx="100" cy="100" r="86"/><circle class="arc" id="arc" cx="100" cy="100" r="86"/></svg>
+      <div class="num"><b id="fps">0</b><span>fps</span></div>
+    </div>
+    <div class="state" id="state">Выбери телефон</div>
+    <button id="go" class="go" disabled>Запустить камеру</button>
+    <div class="obs">
+      <b>Как сделать вебкой</b>
+      <ol>
+        <li>Запусти камеру, откроется окно <em>UnCam</em></li>
+        <li>OBS → Источники → <em>Захват окна</em> → <em>[scrcpy.exe]: UnCam</em></li>
+        <li>OBS → <em>Запустить виртуальную камеру</em></li>
+        <li>В Discord или Vela выбери камеру <em>OBS Virtual Camera</em></li>
+      </ol>
+    </div>
+    <details class="log"><summary>Журнал</summary><pre id="log"></pre></details>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
