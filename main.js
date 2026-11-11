@@ -64,6 +64,7 @@ ipcMain.handle("start", async (_e, o) => {
   const fw = await run(exe("adb"), ["-s", serial, "forward", "tcp:" + port, "localabstract:scrcpy_" + scid]);
   if (!fw.ok) { say("ERROR: " + fw.out); me.code = 1; await stopStream(); return false; }
   lastConfig = null;
+  lastSize = null;
   if (o.vcam && o.codec === "h264") startHelper();
   const args = serverArgs({ ...o, scid });
   say("> server " + args.join(" "));
@@ -105,7 +106,7 @@ ipcMain.on("ctl", (_e, m) => {
 });
 const VC = app.isPackaged ? path.join(process.resourcesPath, "vcam") : path.join(__dirname, "vcam", "bin");
 const VC_CLSID = "{9EE4725C-A857-4168-838F-ADF134EC3551}";
-let helper = null, view = { rot: 0, mirror: false }, lastConfig = null, helperNeedKey = true;
+let helper = null, view = { rot: 0, mirror: false }, lastConfig = null, lastSize = null, helperNeedKey = true;
 async function vcamInstalled() {
   if (process.platform !== "win32") return false;
   const r = await run("reg", ["query", "HKCR\\CLSID\\" + VC_CLSID + "\\InprocServer32"]);
@@ -133,6 +134,7 @@ function startHelper() {
   p.on("error", (e) => say("ERROR: vcam " + e.message));
   p.stdin.on("error", () => {});
   p.on("close", () => { if (helper === p) helper = null; });
+  if (lastSize) p.stdin.write(frameMsg(4, lastSize));
   if (lastConfig) p.stdin.write(frameMsg(1, lastConfig));
   if (sess && sess.control) sess.control.write(Buffer.from([17]));
 }
@@ -144,6 +146,13 @@ function stopHelper() {
   setTimeout(() => p.kill(), 300);
 }
 function toHelper(ev) {
+  if (ev.t === "size") {
+    lastSize = Buffer.alloc(8);
+    lastSize.writeUInt32BE(ev.w, 0);
+    lastSize.writeUInt32BE(ev.h, 4);
+    if (helper) helper.stdin.write(frameMsg(4, lastSize));
+    return;
+  }
   if (!helper || ev.t !== "pkt") return;
   if (ev.config) { lastConfig = ev.data; helper.stdin.write(frameMsg(1, ev.data)); return; }
   if (helperNeedKey && !ev.key) return;

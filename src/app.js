@@ -335,7 +335,9 @@ window.uc.onV((ev) => {
 });
 window.uc.onLog((l) => {
   log(l);
-  if (/ERROR/.test(l) && running) setState(l.replace(/^.*ERROR:\s*/, "").slice(0, 160), "err");
+  const hs = l.match(/not part of the high speed supported size list \[([^\]]+)\]/);
+  if (hs && running) setState("Скоростной режим на этой камере работает только в " + hs[1].replace(/x/g, "×"), "err");
+  else if (/ERROR/.test(l) && running) setState(l.replace(/^.*ERROR:\s*/, "").slice(0, 160), "err");
 });
 window.uc.onExit((code) => {
   const wasErr = $("state").classList.contains("err");

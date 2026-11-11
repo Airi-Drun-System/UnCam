@@ -35,6 +35,7 @@ static bool readAll(HANDLE h, void* buf, DWORD n) {
 }
 
 struct Converter {
+    int vw = 0, vh = 0;
     int rot = 0;
     bool mirror = false;
     scCamera cam = nullptr;
@@ -42,6 +43,8 @@ struct Converter {
     std::vector<uint8_t> out;
 
     void send(const uint8_t* y, const uint8_t* uv, int pitch, int w, int h) {
+        if (vw > 0 && vw <= w) w = vw;
+        if (vh > 0 && vh <= h) h = vh;
         bool side = rot == 90 || rot == 270;
         int ow = (side ? h : w) & ~3, oh = (side ? w : h) & ~3;
         if (ow <= 0 || oh <= 0) return;
@@ -244,6 +247,11 @@ int main(int argc, char** argv) {
         data.resize(n);
         if (n && !readAll(in, data.data(), n)) break;
         if (hdr[0] == 1) { config = data; continue; }
+        if (hdr[0] == 4 && n >= 8) {
+            conv.vw = (int)((uint32_t)data[0] << 24 | (uint32_t)data[1] << 16 | (uint32_t)data[2] << 8 | data[3]);
+            conv.vh = (int)((uint32_t)data[4] << 24 | (uint32_t)data[5] << 16 | (uint32_t)data[6] << 8 | data[7]);
+            continue;
+        }
         if (hdr[0] == 2 && !config.empty()) data.insert(data.begin(), config.begin(), config.end());
         t += 166666;
         dec.push(data, t, conv);
