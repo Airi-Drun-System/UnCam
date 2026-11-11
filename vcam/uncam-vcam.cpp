@@ -35,7 +35,7 @@ static bool readAll(HANDLE h, void* buf, DWORD n) {
 }
 
 struct Converter {
-    int vw = 0, vh = 0;
+    int vw = 0, vh = 0, cx = 0, cy = 0, cwid = 10000, chei = 10000;
     int rot = 0;
     bool mirror = false;
     scCamera cam = nullptr;
@@ -45,6 +45,17 @@ struct Converter {
     void send(const uint8_t* y, const uint8_t* uv, int pitch, int w, int h) {
         if (vw > 0 && vw <= w) w = vw;
         if (vh > 0 && vh <= h) h = vh;
+        if (cwid < 10000 || chei < 10000) {
+            int x0 = (int)((long long)cx * w / 10000) & ~1, y0 = (int)((long long)cy * h / 10000) & ~1;
+            int nw = (int)((long long)cwid * w / 10000), nh = (int)((long long)chei * h / 10000);
+            if (x0 + nw > w) nw = w - x0;
+            if (y0 + nh > h) nh = h - y0;
+            if (nw < 8 || nh < 8) return;
+            y += (size_t)y0 * pitch + x0;
+            uv += (size_t)(y0 / 2) * pitch + x0;
+            w = nw;
+            h = nh & ~1;
+        }
         bool side = rot == 90 || rot == 270;
         int ow = (side ? h : w) & ~3, oh = (side ? w : h) & ~3;
         if (ow <= 0 || oh <= 0) return;
@@ -221,6 +232,7 @@ int main(int argc, char** argv) {
     Converter conv;
     if (argc > 1) conv.rot = atoi(argv[1]);
     if (argc > 2) conv.mirror = atoi(argv[2]) != 0;
+    if (argc > 6) { conv.cx = atoi(argv[3]); conv.cy = atoi(argv[4]); conv.cwid = atoi(argv[5]); conv.chei = atoi(argv[6]); }
     wchar_t dir[MAX_PATH];
     GetModuleFileNameW(nullptr, dir, MAX_PATH);
     std::wstring path(dir);

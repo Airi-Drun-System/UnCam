@@ -18,14 +18,15 @@
       needKey = true;
     }
     function draw(frame) {
-      const fw = frame.displayWidth, fh = frame.displayHeight, side = view.rot % 180 !== 0;
+      const W = frame.displayWidth, H = frame.displayHeight, cr = view.crop;
+      const sx = cr ? Math.round(cr.x * W) : 0, sy = cr ? Math.round(cr.y * H) : 0, fw = cr ? Math.max(2, Math.round(cr.w * W)) : W, fh = cr ? Math.max(2, Math.round(cr.h * H)) : H, side = view.rot % 180 !== 0;
       const cw = side ? fh : fw, ch = side ? fw : fh;
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.translate(cw / 2, ch / 2);
       ctx.rotate((view.rot * Math.PI) / 180);
       if (view.mirror) ctx.scale(-1, 1);
-      ctx.drawImage(frame, -fw / 2, -fh / 2, fw, fh);
+      ctx.drawImage(frame, sx, sy, fw, fh, -fw / 2, -fh / 2, fw, fh);
       frame.close();
       count++;
     }
@@ -54,7 +55,7 @@
     }
     return {
       feed,
-      setView(v) { view = { rot: +v.rot || 0, mirror: !!v.mirror }; },
+      setView(v) { view = { rot: +v.rot || 0, mirror: !!v.mirror, crop: v.crop || null }; },
       clear() { reset(); pending = null; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height); },
       size: () => [w, h],
       destroy() { clearInterval(tick); reset(); }

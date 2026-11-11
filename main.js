@@ -66,6 +66,10 @@ ipcMain.handle("start", async (_e, o) => {
   lastConfig = null;
   lastSize = null;
   if (o.vcam && o.codec === "h264") startHelper();
+  if (o.source === "app") {
+    await run(exe("adb"), ["-s", serial, "shell", "input keyevent KEYCODE_WAKEUP"]);
+    await run(exe("adb"), ["-s", serial, "shell", "am start -a android.media.action.VIDEO_CAMERA"]);
+  }
   const args = serverArgs({ ...o, scid });
   say("> server " + args.join(" "));
   me.proc = spawn(exe("adb"), ["-s", serial, "shell", "CLASSPATH=" + REMOTE, "app_process", "/", "com.genymobile.scrcpy.Server", SERVER_VER, ...args], { env, windowsHide: true });
@@ -127,7 +131,8 @@ function frameMsg(type, data) {
 }
 function startHelper() {
   stopHelper();
-  const p = spawn(path.join(VC, "uncam-vcam.exe"), [String(view.rot), view.mirror ? "1" : "0"], { windowsHide: true });
+  const c = view.crop ? [view.crop.x, view.crop.y, view.crop.w, view.crop.h].map((n) => String(Math.round(n * 10000))) : [];
+  const p = spawn(path.join(VC, "uncam-vcam.exe"), [String(view.rot), view.mirror ? "1" : "0", ...c], { windowsHide: true });
   helper = p;
   helperNeedKey = true;
   p.stderr.on("data", (d) => String(d).split(/\r?\n/).forEach((l) => l.trim() && say("vcam: " + l)));
@@ -165,8 +170,9 @@ function toHelper(ev) {
   helper.stdin.write(frameMsg(ev.key ? 2 : 3, ev.data));
 }
 ipcMain.on("view", (_e, v) => {
-  const changed = +v.rot !== view.rot || !!v.mirror !== view.mirror;
-  view = { rot: +v.rot || 0, mirror: !!v.mirror };
+  const crop = v.crop && [v.crop.x, v.crop.y, v.crop.w, v.crop.h].every((n) => typeof n === "number" && n >= 0 && n <= 1) ? v.crop : null;
+  const changed = +v.rot !== view.rot || !!v.mirror !== view.mirror || JSON.stringify(crop) !== JSON.stringify(view.crop || null);
+  view = { rot: +v.rot || 0, mirror: !!v.mirror, crop };
   if (changed && helper) startHelper();
 });
 ipcMain.on("win", (_e, a) => {

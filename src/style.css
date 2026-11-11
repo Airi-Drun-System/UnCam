@@ -616,3 +616,31 @@ body.play .live {
   position: absolute;
   inset: 0;
 }
+body.src-app .camOnly, body.src-cam .appOnly {
+  display: none !important;
+}
+.cropSel {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  background: rgba(0, 0, 0, .25);
+  z-index: 3;
+}
+.cropSel span {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  background: var(--txt);
+  color: var(--bg);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.cropSel i {
+  position: absolute;
+  border: 2px solid var(--txt);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45);
+  display: none;
+}

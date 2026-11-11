@@ -41,16 +41,26 @@
     </div>
     <div class="card" id="camCard">
       <div class="h"><b>Камера</b><span class="muted" id="camInfo"></span></div>
+      <div class="seg wide" id="srcSel">
+        <button data-v="cam">Напрямую</button>
+        <button data-v="app">Через приложение Камера</button>
+      </div>
+      <div id="appBox" class="sub">
+        <p class="hint">UnCam откроет на телефоне обычную «Камеру» в режиме видео и будет брать картинку с экрана. Так Xiaomi отдаёт 60 fps. Включи в «Камере» 60 к/с, а лишние кнопки обрежь кнопкой «Обрезать» на превью.</p>
+        <div class="f">Кадров в секунду<div class="seg" id="afps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="90">90</button><button data-v="120">120</button></div></div>
+      </div>
+      <div id="direct" class="sub">
       <div id="cams" class="chips"></div>
       <label class="f">Разрешение<select id="size"></select></label>
       <div class="f">Кадров в секунду<div id="fpsSel" class="seg"></div></div>
+      </div>
       <label class="f">Битрейт <span id="brV" class="val"></span><input type="range" id="br" min="4" max="60" step="2"></label>
       <div class="f">Кодек<div class="seg" id="codec"><button data-v="h264">H.264</button><button data-v="h265">H.265</button></div></div>
       <div class="f">Поворот<div class="seg" id="rot"><button data-v="0">0°</button><button data-v="90">90°</button><button data-v="180">180°</button><button data-v="270">270°</button></div></div>
-      <label class="f" id="zoomRow">Зум <span id="zoomV" class="val"></span><input type="range" id="zoom" min="1" max="10" step="0.1"></label>
+      <label class="f camOnly" id="zoomRow">Зум <span id="zoomV" class="val"></span><input type="range" id="zoom" min="1" max="10" step="0.1"></label>
       <div class="togs">
         <label class="tog"><input type="checkbox" id="mirror"><i></i>Зеркало</label>
-        <label class="tog"><input type="checkbox" id="torch"><i></i>Фонарик</label>
+        <label class="tog camOnly"><input type="checkbox" id="torch"><i></i>Фонарик</label>
       </div>
     </div>
   </section>
@@ -58,11 +68,14 @@
     <div class="screen" id="screen">
       <canvas id="v" width="1280" height="720"></canvas>
       <div class="idle" id="idle"><span class="lens big"></span><span id="state" class="state">Выбери телефон</span></div>
+      <div class="cropSel" id="cropSel" hidden><i id="cropBox"></i><span>Выдели мышкой область с картинкой камеры</span></div>
       <div class="badge" id="badge"><i></i><b id="fps">0</b> fps <span class="sep">с телефона <b id="src">0</b></span></div>
       <div class="live" id="liveBar">
-        <button id="zout" title="Отдалить">−</button>
-        <button id="zin" title="Приблизить">+</button>
-        <button id="torchBtn" title="Фонарик">Фонарик</button>
+        <button id="cropBtn" class="appOnly">Обрезать</button>
+        <button id="cropReset" class="appOnly">Без обрезки</button>
+        <button id="zout" class="camOnly" title="Отдалить">−</button>
+        <button id="zin" class="camOnly" title="Приблизить">+</button>
+        <button id="torchBtn" class="camOnly" title="Фонарик">Фонарик</button>
       </div>
     </div>
     <div class="acts">

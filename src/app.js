@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, vcam: true, addr: "" };
+const DEF = { mode: "usb", serial: "", cam: "", size: "", fps: 60, brusb: 30, brwifi: 16, codec: "h264", rot: "0", zoom: 1, mirror: false, torch: false, vcam: true, src: "cam", afps: 60, crop: null, addr: "" };
 let S = DEF;
 try { S = { ...DEF, ...JSON.parse(localStorage.getItem("uc") || "{}") }; } catch {}
 const save = () => { try { localStorage.setItem("uc", JSON.stringify(S)); } catch {} };
@@ -58,8 +58,8 @@ function renderDevs() {
   }
   const c = cur();
   $("toWifi").disabled = !c || c.wifi || c.state !== "device";
-  $("go").disabled = !running && (!c || c.state !== "device" || !cams.length);
-  if (!running) setState(!c ? "Выбери телефон" : c.state !== "device" ? "Телефон не готов" : cams.length ? "Готово к запуску" : "Читаю камеры...");
+  $("go").disabled = !running && (!c || c.state !== "device" || (S.src === "cam" && !cams.length));
+  if (!running) setState(!c ? "Выбери телефон" : c.state !== "device" ? "Телефон не готов" : cams.length || S.src === "app" ? "Готово к запуску" : "Читаю камеры...");
 }
 async function poll() {
   if (busy || running) return;
@@ -109,7 +109,7 @@ function camName(c) {
 function renderCams() {
   const box = $("cams");
   box.textContent = "";
-  $("camCard").classList.toggle("off", !cams.length);
+  $("camCard").classList.toggle("off", !cams.length && S.src === "cam");
   if (!cams.length) return;
   if (!cams.some((c) => c.id === S.cam)) S.cam = (cams.find((c) => c.facing === "back") || cams[0]).id;
   for (const c of cams) {
@@ -264,7 +264,7 @@ seg($("codec"), S.codec, (v) => { S.codec = v; save(); vcUi(); });
 seg($("rot"), S.rot, (v) => { S.rot = v; save(); pushView(); });
 $("zoom").oninput = () => { S.zoom = +$("zoom").value; $("zoomV").textContent = S.zoom.toFixed(1) + "x"; save(); };
 function pushView() {
-  const v = { rot: S.rot, mirror: S.mirror };
+  const v = { rot: S.rot, mirror: S.mirror, crop: S.src === "app" ? S.crop : null };
   player.setView(v);
   window.uc.view(v);
   try { localStorage.setItem("ucView", JSON.stringify(v)); } catch {}
@@ -297,7 +297,8 @@ $("go").onclick = async () => {
   if (!c) return;
   const { high } = fpsList();
   const hs = high.includes(+S.fps);
-  target = +S.fps;
+  const app = S.src === "app";
+  target = app ? +S.afps : +S.fps;
   running = true;
   torchOn = !!S.torch;
   $("torchBtn").classList.toggle("on", torchOn);
@@ -307,9 +308,61 @@ $("go").onclick = async () => {
   $("fps").textContent = "0";
   setState("Запускается...");
   pushView();
-  const ok = await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch, vcam: S.vcam && vcOk });
+  const br = S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb;
+  const ok = app ? await window.uc.start({ source: "app", serial: c.serial, fps: +S.afps, bitrate: br, codec: S.codec, vcam: S.vcam && vcOk }) : await window.uc.start({ serial: c.serial, cam: S.cam, size: S.size, fps: +S.fps, high: hs, bitrate: S.mode === "wifi" || c.wifi ? S.brwifi : S.brusb, codec: S.codec, zoom: hs ? 1 : S.zoom, torch: S.torch, vcam: S.vcam && vcOk });
   if (!ok && running) { stopped(); setState("Не удалось запустить, смотри журнал", "err"); }
 };
+function setSrc(v) {
+  S.src = v;
+  save();
+  document.body.classList.toggle("src-app", v === "app");
+  document.body.classList.toggle("src-cam", v !== "app");
+  $("appBox").hidden = v !== "app";
+  $("direct").hidden = v === "app";
+  renderCams();
+  renderDevs();
+  pushView();
+}
+seg($("srcSel"), S.src, setSrc);
+seg($("afps"), S.afps, (v) => { S.afps = +v; save(); });
+let cropping = null;
+function imgBox() {
+  const c = $("v"), r = c.getBoundingClientRect(), k = Math.min(r.width / c.width, r.height / c.height), w = c.width * k, h = c.height * k;
+  return { x: r.left + (r.width - w) / 2, y: r.top + (r.height - h) / 2, w, h };
+}
+function cropEnd() {
+  $("cropSel").hidden = true;
+  $("cropBox").style.display = "none";
+  cropping = null;
+  pushView();
+}
+$("cropBtn").onclick = () => {
+  player.setView({ rot: 0, mirror: false, crop: null });
+  $("cropSel").hidden = false;
+};
+$("cropReset").onclick = () => { S.crop = null; save(); pushView(); };
+$("cropSel").onmousedown = (e) => {
+  const b = imgBox();
+  cropping = { b, x0: Math.min(Math.max((e.clientX - b.x) / b.w, 0), 1), y0: Math.min(Math.max((e.clientY - b.y) / b.h, 0), 1) };
+};
+addEventListener("mousemove", (e) => {
+  if (!cropping) return;
+  const { b, x0, y0 } = cropping, x1 = Math.min(Math.max((e.clientX - b.x) / b.w, 0), 1), y1 = Math.min(Math.max((e.clientY - b.y) / b.h, 0), 1);
+  cropping.r = { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+  const sr = $("screen").getBoundingClientRect(), bx = $("cropBox");
+  bx.style.display = "block";
+  bx.style.left = b.x - sr.left + cropping.r.x * b.w + "px";
+  bx.style.top = b.y - sr.top + cropping.r.y * b.h + "px";
+  bx.style.width = cropping.r.w * b.w + "px";
+  bx.style.height = cropping.r.h * b.h + "px";
+});
+addEventListener("mouseup", () => {
+  if (!cropping) return;
+  const r = cropping.r;
+  if (r && r.w > 0.05 && r.h > 0.05) { S.crop = r; save(); }
+  cropEnd();
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("cropSel").hidden) cropEnd(); });
 let vcOk = false;
 function vcUi() {
   $("vcam").checked = S.vcam;
@@ -358,7 +411,6 @@ window.uc.onUpdate((o) => {
 });
 for (const b of document.querySelectorAll("[data-w]")) b.onclick = () => window.uc.win(b.dataset.w);
 setMode(S.mode);
-pushView();
-renderCams();
+setSrc(S.src);
 poll();
 setInterval(poll, 2500);
