@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("uc", {
   onLog: on("log"),
   onExit: on("exit"),
   onV: on("v"),
+  onRate: on("rate"),
   onView: on("view"),
   onUpdate: on("upd"),
   restart: () => ipcRenderer.send("upd-restart"),

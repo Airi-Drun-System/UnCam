@@ -159,15 +159,17 @@ function fpsList() {
 }
 function renderFps() {
   const { normal, high } = fpsList();
-  const all = [...normal, ...high];
+  const forced = normal.length && !normal.includes(60) && !high.includes(60) ? [60] : [];
+  const all = [...normal, ...forced, ...high].sort((a, b) => a - b);
   const box = $("fpsSel");
   box.textContent = "";
   if (!all.includes(+S.fps)) S.fps = all.includes(60) ? 60 : Math.max(...normal, 0) || all[0] || 30;
   for (const f of all) {
     const b = document.createElement("button");
     b.dataset.v = f;
-    b.textContent = f + (high.includes(f) ? " HS" : "");
+    b.textContent = f + (high.includes(f) ? " HS" : forced.includes(f) ? " ?" : "");
     if (high.includes(f)) b.title = "Скоростная съёмка: только в этом разрешении, без зума";
+    if (forced.includes(f)) b.title = "Телефон не заявляет 60 fps, но можно попробовать";
     box.append(b);
   }
   seg(box, S.fps, (v) => { S.fps = +v; save(); });
@@ -272,9 +274,12 @@ for (const k of ["mirror", "torch"]) {
   $(k).onchange = () => { S[k] = $(k).checked; save(); if (k === "mirror") pushView(); };
 }
 
+let srcFps = 0;
+window.uc.onRate((r) => { srcFps = r; });
 function onFps(f) {
   if (!running) return;
   $("fps").textContent = f;
+  $("src").textContent = srcFps;
   const bd = $("badge");
   bd.classList.toggle("good", f >= target * 0.95);
   bd.classList.toggle("low", f > 0 && f < target * 0.8);

@@ -44,6 +44,7 @@ async function stopStream() {
   const s = sess;
   if (!s) return;
   sess = null;
+  clearInterval(s.rate);
   for (const k of ["video", "control"]) if (s[k]) s[k].destroy();
   stopHelper();
   if (s.proc) s.proc.kill();
@@ -83,6 +84,7 @@ ipcMain.handle("start", async (_e, o) => {
   }
   const parser = new StreamParser((ev) => {
     if (ev.t === "codec" && ev.name === "error") { say("ERROR: камера не запустилась (проверь разрешение и fps)"); }
+    if (ev.t === "pkt" && !ev.config) me.n = (me.n || 0) + 1;
     send("v", ev);
     toHelper(ev);
   });
@@ -90,6 +92,7 @@ ipcMain.handle("start", async (_e, o) => {
   me.video.on("error", () => {});
   me.video.on("close", () => { if (sess === me) stopStream(); });
   me.video.resume();
+  me.rate = setInterval(() => { send("rate", me.n || 0); me.n = 0; }, 1000);
   return true;
 });
 ipcMain.handle("stop", () => stopStream());

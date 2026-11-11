@@ -446,12 +446,10 @@ body.run .go {
 }
 .obs {
   width: 100%;
-  max-width: 460px;
   background: #0f0f0f;
   border-radius: 16px;
   padding: 14px 16px;
   font-size: 13px;
-  margin-top: auto;
 }
 .obs ol {
   margin: 8px 0 0;
@@ -467,7 +465,6 @@ body.run .go {
 }
 .log {
   width: 100%;
-  max-width: 460px;
 }
 .log pre {
   max-height: 160px;
@@ -503,12 +500,11 @@ body.run .go:hover:not(:disabled) {
 .screen {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 52vh;
+  flex: 1;
+  min-height: 240px;
   background: #000;
   border-radius: 16px;
   overflow: hidden;
-  flex: none;
 }
 .screen canvas {
   width: 100%;
@@ -606,4 +602,17 @@ body.play .live {
 .ghost.big {
   padding: 13px 18px;
   font-size: 14px;
+}
+.badge .sep {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid #444;
+}
+.badge .sep b {
+  color: var(--txt) !important;
+  font-size: 12px;
+}
+.screen canvas {
+  position: absolute;
+  inset: 0;
 }
